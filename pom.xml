@@ -17,5 +17,17 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-
+    <dependencies>
+        <dependency>
+            <groupId>com.wsmhz</groupId>
+            <artifactId>wsmhz-security-core</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.wsmhz.common</groupId>
+                    <artifactId>common-business</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
 </project>
