@@ -42,7 +42,7 @@ public class RedisValidateCodeRepository implements ValidateCodeRepository {
 	}
 
 	private String buildKey(ServletWebRequest request, ValidateCodeType type) {
-		String deviceId = request.getHeader("deviceId");
+		String deviceId = request.getParameter("deviceId"); // 可改为request.getHeader()
 		if (StringUtils.isBlank(deviceId)) {
 			throw new ValidateCodeException("请在请求头中携带deviceId参数,设备唯一识别码");
 		}

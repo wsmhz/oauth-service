@@ -2,7 +2,6 @@ package com.wsmhz.security.oauth.service.service.impl;
 
 
 import com.wsmhz.common.business.service.impl.BaseServiceImpl;
-
 import com.wsmhz.security.oauth.service.domain.entity.User;
 import com.wsmhz.security.oauth.service.mapper.UserMapper;
 import com.wsmhz.security.oauth.service.service.UserService;

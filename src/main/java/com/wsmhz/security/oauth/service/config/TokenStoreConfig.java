@@ -31,6 +31,7 @@ public class TokenStoreConfig {
 
 		@Bean
 		public TokenStore redisTokenStore() {
+
 			return new RedisTokenStore(redisConnectionFactory);
 		}
 		

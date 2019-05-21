@@ -1,6 +1,5 @@
 package com.wsmhz.security.oauth.service.app.social;
 
-
 import com.wsmhz.security.oauth.service.app.AppSecretException;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -6,12 +6,15 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.config.annotation.builders.InMemoryClientDetailsServiceBuilder;
 import org.springframework.security.oauth2.config.annotation.configurers.ClientDetailsServiceConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configuration.AuthorizationServerConfigurerAdapter;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
+import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
 import org.springframework.security.oauth2.provider.token.TokenEnhancer;
 import org.springframework.security.oauth2.provider.token.TokenEnhancerChain;
 import org.springframework.security.oauth2.provider.token.TokenStore;
@@ -27,68 +30,65 @@ import java.util.List;
 @Configuration
 @EnableAuthorizationServer
 public class WsmhzAuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
+    private final AuthenticationManager authenticationManager;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private UserDetailsService userDetailsService;
+    @Autowired
+    private TokenStore tokenStore;
+    @Autowired(required = false)
+    private JwtAccessTokenConverter jwtAccessTokenConverter;
+    @Autowired(required = false)
+    private TokenEnhancer jwtTokenEnhancer;
+    @Autowired
+    private SecurityProperties securityProperties;
 
-	@Autowired
-	private UserDetailsService userDetailsService;
+    public WsmhzAuthorizationServerConfig(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        this.authenticationManager = authenticationConfiguration.getAuthenticationManager();
+    }
 
-	@Autowired(required = false)
-	private AuthenticationManager authenticationManager;
 
-	@Autowired
-	private TokenStore tokenStore;
+    @Override
+    public void configure(AuthorizationServerEndpointsConfigurer endpoints) {
+        endpoints
+                .authenticationManager(authenticationManager)
+                .userDetailsService(userDetailsService)
+                .tokenStore(tokenStore);
+        if (jwtAccessTokenConverter != null && jwtTokenEnhancer != null) {
+            TokenEnhancerChain enhancerChain = new TokenEnhancerChain();
+            List<TokenEnhancer> enhancers = new ArrayList<>();
+            enhancers.add(jwtTokenEnhancer);
+            enhancers.add(jwtAccessTokenConverter);
+            enhancerChain.setTokenEnhancers(enhancers);
+            endpoints.tokenEnhancer(enhancerChain).accessTokenConverter(jwtAccessTokenConverter);
+        }
+    }
 
-	@Autowired(required = false)
-	private JwtAccessTokenConverter jwtAccessTokenConverter;
+    @Override
+    public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
+        //添加客户端信息
+        InMemoryClientDetailsServiceBuilder builder = clients.inMemory();
+        if (ArrayUtils.isNotEmpty(securityProperties.getOauth2().getClients())) {
+            for (OAuth2ClientProperties client : securityProperties.getOauth2().getClients()) {
+                builder.withClient(client.getClientId())
+                        .secret(passwordEncoder.encode(client.getClientSecret()))
+                        .authorizedGrantTypes(client.getAuthorizedGrantTypes())
+                        .accessTokenValiditySeconds(client.getAccessTokenValidateSeconds())
+                        .refreshTokenValiditySeconds(client.getRefreshTokenValiditySeconds())
+                        .redirectUris(client.getRedirectUris())
+                        .resourceIds(client.getResourceIds())
+                        .scopes(client.getScopes());
+            }
+        }
+    }
 
-	@Autowired(required = false)
-	private TokenEnhancer jwtTokenEnhancer;
-
-	@Autowired
-	private SecurityProperties securityProperties;
-
-	/**
-	 * 认证及token配置
-	 */
-	@Override
-	public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
-		endpoints.tokenStore(tokenStore)
-				.authenticationManager(authenticationManager)
-				.userDetailsService(userDetailsService);
-
-		if (jwtAccessTokenConverter != null && jwtTokenEnhancer != null) {
-			TokenEnhancerChain enhancerChain = new TokenEnhancerChain();
-			List<TokenEnhancer> enhancers = new ArrayList<>();
-			enhancers.add(jwtTokenEnhancer);
-			enhancers.add(jwtAccessTokenConverter);
-			enhancerChain.setTokenEnhancers(enhancers);
-			endpoints.tokenEnhancer(enhancerChain).accessTokenConverter(jwtAccessTokenConverter);
-		}
-
-	}
-//
-//	/**
-//	 * tokenKey的访问权限表达式配置
-//	 */
-//	public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
-//		security.tokenKeyAccess("permitAll()");
-//	}
-//
-	/**
-	 * 客户端配置
-	 */
-	@Override
-	public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
-		InMemoryClientDetailsServiceBuilder builder = clients.inMemory();
-		if (ArrayUtils.isNotEmpty(securityProperties.getOauth2().getClients())) {
-			for (OAuth2ClientProperties client : securityProperties.getOauth2().getClients()) {
-				builder.withClient(client.getClientId())
-						.secret(client.getClientSecret())
-						.authorizedGrantTypes("refresh_token", "authorization_code", "password")
-						.accessTokenValiditySeconds(client.getAccessTokenValidateSeconds())
-						.refreshTokenValiditySeconds(2592000)
-						.scopes("all");
-			}
-		}
-	}
+    @Override
+    public void configure(AuthorizationServerSecurityConfigurer oauthServer) {
+        oauthServer
+                .tokenKeyAccess("permitAll()")
+                .checkTokenAccess("permitAll()")
+                .allowFormAuthenticationForClients();
+    }
 
 }
