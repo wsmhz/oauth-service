@@ -1,8 +1,8 @@
 package com.wsmhz.security.oauth.service.controller;
 
 import com.wsmhz.common.business.response.ServerResponse;
-import com.wsmhz.security.oauth.service.domain.entity.User;
-import com.wsmhz.security.oauth.service.service.UserService;
+import com.wsmhz.security.resource.service.api.api.UserApi;
+import com.wsmhz.security.resource.service.api.domain.form.UserRegisterForm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,9 +23,7 @@ public class OauthUserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
-    private UserService userService;
-//    @Autowired
-//    private UserApi userApi;
+    private UserApi userApi;
 
     @GetMapping("/test")
     public ServerResponse test() {
@@ -38,10 +36,10 @@ public class OauthUserController {
     }
 
     @PostMapping("/register")
-    public ServerResponse register(@RequestBody @Valid User user){
+    public ServerResponse register(@RequestBody @Valid UserRegisterForm user){
         String encodePassword = passwordEncoder.encode(user.getPassword());
         user.setPassword(encodePassword);
-        if(userService.insertSelective(user) > 0){
+        if(userApi.insert(user)){
             return ServerResponse.createBySuccessMessage("注册成功");
         }
         return ServerResponse.createBySuccessMessage("注册失败");
